@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Editor Giochi Didattici</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;font-size:20px;background:linear-gradient(135deg,#ff7a00,#ffd000,#e63900);color:white}
+header{text-align:center;padding:20px} header h1{margin:0;font-size:52px}
+main{display:grid;grid-template-columns:430px 1fr;gap:24px;padding:24px;max-width:1800px;margin:auto}
+.panel{background:rgba(255,255,255,.2);border-radius:24px;padding:28px} h2{font-size:34px} h3{margin-bottom:8px}
+label{display:block;margin-top:14px;font-weight:bold;font-size:22px}
+input,textarea,select{width:100%;padding:14px;font-size:20px;border:none;border-radius:10px;margin-top:6px} textarea{resize:vertical;min-height:90px}
+button{padding:12px 16px;font-size:18px;border:none;border-radius:12px;background:#e63900;color:white;font-weight:bold;cursor:pointer;margin-top:8px} button:hover{background:#ff7a00}
+.saveBtn{background:green}.deleteBtn{background:#8b0000}.clearBtn{background:#b35400}.small{font-size:15px;opacity:.95;line-height:1.4}.hidden{display:none}
+input[type="checkbox"]{width:40px;height:40px;transform:scale(1.4);accent-color:#e63900;cursor:pointer}
+#stage{position:relative;width:100%;height:650px;background:#fff3c4;border:5px solid #e63900;border-radius:20px;overflow:hidden;cursor:crosshair}
+#centralImage{width:100%;height:100%;object-fit:contain;display:none} #placeholder{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#7a2400;font-size:32px;text-align:center;padding:20px}
+.tag{position:absolute;width:54px;height:54px;border-radius:50%;background:#e63900;border:4px solid white;color:white;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:24px;transform:translate(-50%,-50%);cursor:grab;z-index:5}.tag.selected{background:#ffd000;color:#7a2400;border-color:#7a2400}
+#elementsArea{margin-top:24px;background:rgba(255,255,255,.15);border-radius:20px;padding:20px}#items{display:flex;flex-wrap:wrap;gap:18px;justify-content:center}.item{width:230px;background:white;color:#e63900;border-radius:16px;padding:14px;text-align:center;cursor:pointer;font-size:20px}.item.selected{border:5px solid #ffd000}.item img{width:100px;height:100px;object-fit:contain;margin:auto;display:block}.item audio{width:100%;margin-top:8px}.item button{font-size:14px;padding:8px 10px}
+.resultBox{background:white;color:#7a2400;padding:18px;border-radius:16px;margin-top:24px;display:none}.row{display:flex;gap:8px;flex-wrap:wrap}.row button{flex:1}
+@media(max-width:1200px){main{grid-template-columns:1fr}#stage{height:70vw;min-height:450px}}
+</style>
+</head>
+<body>
+<header><h1>Editor Giochi Didattici</h1><p>Crea giochi drag & drop personalizzati ed esporta un file JSON</p></header>
+<main>
+<section class="panel">
+<h2>Impostazioni gioco</h2>
+<label>Titolo</label><input id="title" value="Associa le immagini">
+<label>Istruzioni</label><textarea id="instructions">Trascina ogni elemento nella posizione corretta.</textarea>
+<label>Immagine centrale</label><input id="centralInput" type="file" accept="image/*">
+<label>Immagine finale</label><input id="finalInput" type="file" accept="image/*">
+<label>Messaggio finale</label><input id="finalMessage" value="Complimenti, hai completato il gioco!">
+<hr><h2>Tempo</h2>
+<label><input id="useTimer" type="checkbox"> Attiva tempo limite</label>
+<label>Secondi</label><input id="timerSeconds" type="number" value="60" min="5">
+<hr><h2>Feedback dopo 2 errori</h2>
+<label>Tipo feedback</label><select id="feedbackType"><option value="text">Solo testo</option><option value="imageText">Immagine + testo</option><option value="audioText">Suono + testo</option><option value="all">Testo + immagine + suono</option></select>
+<div id="feedbackTextBox"><label>Testo feedback</label><textarea id="feedbackText">Osserva il materiale di studio e riprova.</textarea></div>
+<div id="feedbackImageBox"><label>Immagine feedback</label><input id="feedbackImageInput" type="file" accept="image/*"></div>
+<div id="feedbackAudioBox"><label>Audio feedback</label><input id="feedbackAudioInput" type="file" accept="audio/*"></div>
+<hr><h2>Elementi</h2>
+<label>Tipo elemento</label><select id="itemType"><option value="text">Solo testo</option><option value="imageText">Testo + immagine</option><option value="image">Solo immagine</option><option value="audioText">Suono + testo</option><option value="audio">Solo suono</option></select>
+<div id="itemTextBox"><label>Nome / testo elemento</label><input id="itemName"></div>
+<div id="itemImageBox"><label>Immagine elemento</label><input id="itemInput" type="file" accept="image/*"></div>
+<div id="itemAudioBox"><label>Audio elemento</label><input id="itemAudioInput" type="file" accept="audio/*"></div>
+<div class="row"><button onclick="addItem()">Aggiungi elemento</button><button class="clearBtn" onclick="clearNewItem()">Pulisci campi</button></div>
+<hr><h2>Esportazione</h2>
+<button class="saveBtn" onclick="downloadJSON()">Scarica file JSON</button>
+<p class="small">Il gioco viene salvato solo sul computer dell’utente. Nessun dato viene caricato online. Per giocare, apri il player e carica questo JSON.</p>
+<div id="resultBox" class="resultBox"><h3>JSON creato!</h3><p>Ora puoi aprire il file nel player online.</p></div>
+</section>
+<section class="panel"><h2>Area immagine centrale</h2><p>Seleziona un elemento e clicca sull’immagine per posizionarlo. Puoi anche trascinare il pallino numerato.</p><div id="stage"><div id="placeholder">Carica immagine centrale</div><img id="centralImage" alt="Immagine centrale"></div><div id="elementsArea"><h2>Elementi aggiunti</h2><div id="items"></div></div></section>
+</main>
+<script>
+let gameData={titolo:"",istruzioni:"",immagineCentrale:"",immagineFinale:"",messaggioFinale:"",maxErrori:2,punteggio:{corretta:1,errore1:0,errore2:0},timer:{attivo:false,secondi:60},feedback:{tipo:"text",testo:"",immagine:"",audio:""},elementi:[]};
+let currentItemImage="",currentItemAudio="",selectedIndex=null,draggingTag=null;
+function readFileAsDataURL(file){return new Promise((resolve,reject)=>{if(!file){resolve("");return;}const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file);});}
+function showHideFields(){const type=document.getElementById('itemType').value;document.getElementById('itemTextBox').classList.toggle('hidden',type==='image'||type==='audio');document.getElementById('itemImageBox').classList.toggle('hidden',!(type==='image'||type==='imageText'));document.getElementById('itemAudioBox').classList.toggle('hidden',!(type==='audio'||type==='audioText'));const ft=document.getElementById('feedbackType').value;document.getElementById('feedbackImageBox').classList.toggle('hidden',!(ft==='imageText'||ft==='all'));document.getElementById('feedbackAudioBox').classList.toggle('hidden',!(ft==='audioText'||ft==='all'));}
+document.getElementById('itemType').addEventListener('change',showHideFields);document.getElementById('feedbackType').addEventListener('change',showHideFields);showHideFields();
+document.getElementById('centralInput').addEventListener('change',async e=>{gameData.immagineCentrale=await readFileAsDataURL(e.target.files[0]);const img=document.getElementById('centralImage');img.src=gameData.immagineCentrale;img.style.display='block';document.getElementById('placeholder').style.display='none';});
+document.getElementById('finalInput').addEventListener('change',async e=>{gameData.immagineFinale=await readFileAsDataURL(e.target.files[0]);});
+document.getElementById('feedbackImageInput').addEventListener('change',async e=>{gameData.feedback.immagine=await readFileAsDataURL(e.target.files[0]);});
+document.getElementById('feedbackAudioInput').addEventListener('change',async e=>{gameData.feedback.audio=await readFileAsDataURL(e.target.files[0]);});
+document.getElementById('itemInput').addEventListener('change',async e=>{currentItemImage=await readFileAsDataURL(e.target.files[0]);});
+document.getElementById('itemAudioInput').addEventListener('change',async e=>{currentItemAudio=await readFileAsDataURL(e.target.files[0]);});
+function addItem(){const type=document.getElementById('itemType').value;const nome=document.getElementById('itemName').value.trim();if((type==='text'||type==='imageText'||type==='audioText')&&!nome){alert('Inserisci il nome/testo dell’elemento.');return;}if((type==='image'||type==='imageText')&&!currentItemImage){alert('Carica un’immagine per questo elemento.');return;}if((type==='audio'||type==='audioText')&&!currentItemAudio){alert('Carica un audio per questo elemento.');return;}gameData.elementi.push({id:Date.now(),tipo:type,nome:nome||`Elemento ${gameData.elementi.length+1}`,immagine:currentItemImage,audio:currentItemAudio,x:null,y:null});selectedIndex=gameData.elementi.length-1;clearNewItem(false);renderItems();renderTags();}
+function clearNewItem(clearName=true){if(clearName)document.getElementById('itemName').value='';document.getElementById('itemInput').value='';document.getElementById('itemAudioInput').value='';currentItemImage='';currentItemAudio='';}
+function selectItem(i){selectedIndex=i;renderItems();renderTags();}
+function deleteItem(i){if(!confirm('Eliminare questo elemento?'))return;gameData.elementi.splice(i,1);selectedIndex=null;renderItems();renderTags();}
+function renderItems(){const box=document.getElementById('items');box.innerHTML='';gameData.elementi.forEach((el,i)=>{const div=document.createElement('div');div.className='item'+(selectedIndex===i?' selected':'');div.onclick=()=>selectItem(i);let html=`<strong>${i+1}. ${escapeHTML(el.nome)}</strong>`;if(el.immagine)html+=`<img src="${el.immagine}" alt="">`;if(el.audio)html+=`<audio controls src="${el.audio}"></audio>`;html+=`<br><button class="deleteBtn" onclick="event.stopPropagation();deleteItem(${i})">Elimina</button>`;div.innerHTML=html;box.appendChild(div);});}
+function renderTags(){document.querySelectorAll('.tag').forEach(t=>t.remove());const stage=document.getElementById('stage');gameData.elementi.forEach((el,i)=>{if(el.x==null||el.y==null)return;const tag=document.createElement('div');tag.className='tag'+(selectedIndex===i?' selected':'');tag.textContent=i+1;tag.style.left=el.x+'%';tag.style.top=el.y+'%';tag.onmousedown=e=>{draggingTag=i;e.preventDefault();};tag.onclick=e=>{e.stopPropagation();selectItem(i);};stage.appendChild(tag);});}
+document.addEventListener('mouseup',()=>draggingTag=null);document.addEventListener('mousemove',e=>{if(draggingTag===null)return;placeElement(draggingTag,e.clientX,e.clientY);});
+document.getElementById('stage').addEventListener('click',e=>{if(selectedIndex===null){alert('Prima seleziona un elemento.');return;}placeElement(selectedIndex,e.clientX,e.clientY);});
+function placeElement(i,clientX,clientY){const rect=document.getElementById('stage').getBoundingClientRect();let x=((clientX-rect.left)/rect.width)*100;let y=((clientY-rect.top)/rect.height)*100;x=Math.max(0,Math.min(100,x));y=Math.max(0,Math.min(100,y));gameData.elementi[i].x=Number(x.toFixed(2));gameData.elementi[i].y=Number(y.toFixed(2));renderTags();}
+function prepareGameData(){gameData.titolo=document.getElementById('title').value.trim()||'Gioco didattico';gameData.istruzioni=document.getElementById('instructions').value.trim();gameData.messaggioFinale=document.getElementById('finalMessage').value.trim();gameData.timer.attivo=document.getElementById('useTimer').checked;gameData.timer.secondi=Number(document.getElementById('timerSeconds').value)||60;gameData.feedback.tipo=document.getElementById('feedbackType').value;gameData.feedback.testo=document.getElementById('feedbackText').value.trim();return gameData;}
+function downloadJSON(){const data=prepareGameData();if(!data.immagineCentrale){alert('Carica un’immagine centrale.');return;}if(data.elementi.length===0){alert('Aggiungi almeno un elemento.');return;}if(data.elementi.some(el=>el.x==null||el.y==null)){alert('Posiziona tutti gli elementi sull’immagine centrale.');return;}const json=JSON.stringify(data,null,2);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;const safeTitle=data.titolo.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-àèéìòù]/gi,'');a.download=safeTitle?`${safeTitle}.json`:'gioco-didattico.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);document.getElementById('resultBox').style.display='block';}
+function escapeHTML(str){return String(str).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+</script>
+</body>
+</html>
